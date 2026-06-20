@@ -11,7 +11,104 @@
     #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
     #__bundler_placeholder { color: #999; font-size: 14px; }
   </style>
-  <noscript>
+  <style>
+  #__tap_overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.82);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  #__tap_overlay .tap-icon {
+    font-size: 52px;
+    margin-bottom: 18px;
+    animation: tap-pulse 1.8s ease-in-out infinite;
+  }
+  #__tap_overlay .tap-text {
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Georgia', serif;
+    font-size: 22px;
+    letter-spacing: 0.06em;
+    opacity: 0.92;
+  }
+  #__tap_overlay .tap-sub {
+    color: rgba(255,255,255,0.55);
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 13px;
+    margin-top: 10px;
+    letter-spacing: 0.04em;
+  }
+  @keyframes tap-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.12); opacity: 1; }
+  }
+</style>
+<script>
+(function() {
+  // Create overlay immediately so it's visible before bundle unpacks
+  var overlay = document.createElement('div');
+  overlay.id = '__tap_overlay';
+  overlay.innerHTML = '<div class="tap-icon">💌</div><div class="tap-text">Tap to Open</div><div class="tap-sub">with sound</div>';
+
+  var audioUnlocked = false;
+
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    audioUnlocked = true;
+
+    // Dismiss overlay with a fade
+    overlay.style.transition = 'opacity 0.4s ease';
+    overlay.style.opacity = '0';
+    setTimeout(function() {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 420);
+
+    // Try to play any audio elements — now and as they appear
+    function tryPlay() {
+      var audios = document.querySelectorAll('audio');
+      audios.forEach(function(a) {
+        if (a.paused) {
+          a.play().catch(function() {});
+        }
+      });
+    }
+
+    // Play immediately if audio already exists
+    tryPlay();
+
+    // Also watch for audio elements added later by the bundle
+    var observer = new MutationObserver(function() {
+      tryPlay();
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+
+    // Stop watching after 10 seconds (bundle will have loaded by then)
+    setTimeout(function() { observer.disconnect(); }, 10000);
+  }
+
+  overlay.addEventListener('click', unlockAudio);
+  overlay.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    unlockAudio();
+  });
+
+  // Add overlay as soon as body is available
+  if (document.body) {
+    document.body.appendChild(overlay);
+  } else {
+    document.addEventListener('DOMContentLoaded', function() {
+      document.body.appendChild(overlay);
+    });
+  }
+})();
+</script>
+<noscript>
     <style>#__bundler_loading { display: none; }</style>
     <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
       This page requires JavaScript to display.
